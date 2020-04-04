@@ -66,17 +66,24 @@ class Friends extends Component {
     return true;
   }
 
+  showEmail(uid) {
+    ToastAndroid.show(this.state.users[uid].email, ToastAndroid.SHORT)
+  }
+
   renderRows() {
     let renderArray = []
     let friends = Object.keys(this.state.friends) 
 
       for(let i=0; i<friends.length; i++)
         renderArray.push(
-          <View style={{ width: 200, borderWidth: 1, borderRadius: 20, marginBottom: '3%', backgroundColor: '#24a463', borderLeftWidth: 3, borderRightWidth: 3, borderColor: '#ededed' }}>
+          <TouchableOpacity
+            onPress={this.showEmail.bind(this, friends[i])}
+            style={{ width: 200, borderWidth: 1, borderRadius: 20, marginBottom: '3%', backgroundColor: '#24a463', borderLeftWidth: 3, borderRightWidth: 3, borderColor: '#ededed' }}
+          >
             <Text style={[styles.buttonText, { fontSize: f * 18, padding: '2%' }]}>
               {this.state.friends[friends[i]]}
             </Text>
-          </View>
+          </TouchableOpacity>
         )
 
     if(renderArray.length > 0)

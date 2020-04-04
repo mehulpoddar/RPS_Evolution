@@ -75,7 +75,7 @@ const swordImg = require('../../images/Scissors/sword.png');
 const axeImg = require('../../images/Scissors/axe.png');
 const scytheImg = require('../../images/Scissors/scythe.png');
 
-const gameStats = {
+let gameStats = {
   scissors: {
     won: 0,
     lost: 0,
