@@ -20,7 +20,7 @@ let f = 1;
 
 class Friends extends Component {
 
-  state = { name: '', email: '', friends: {}, users: {} }
+  state = { email: '', friends: {}, users: {} }
 
   componentDidMount() {
     f = PixelRatio.getFontScale(); //Font Factor
@@ -39,23 +39,34 @@ class Friends extends Component {
   }
 
   onAddPress() {
-    if (this.state.name === '' || this.state.email === '') {
-      ToastAndroid.show('Add Friend Details', ToastAndroid.SHORT);
+    if (this.state.email === '') {
+      ToastAndroid.show('Enter Friend Email', ToastAndroid.SHORT);
     } else if(this.state.email === this.state.users[firebase.auth().currentUser.uid].email )
       ToastAndroid.show('Don\'t friend yourself, Come on!', ToastAndroid.SHORT)
     else {
-      temp = {}
+      let frndUid = ''
       let userKeys = Object.keys(this.state.users) 
       for(let i=0; i<userKeys.length; i++)
         if(this.state.users[userKeys[i]].email == this.state.email) {
-          temp[userKeys[i]] = this.state.name
+          frndUid = userKeys[i]
           break
         }
 
-      if(Object.keys(temp) == 0)
+      if(frndUid == '')
         ToastAndroid.show(this.state.email + ' is not on this game!', ToastAndroid.SHORT)
       else {
-        firebase.database().ref('users/'+firebase.auth().currentUser.uid+'/friends').update(temp)
+        let myUid = firebase.auth().currentUser.uid;
+        let updates = {}
+
+        let temp = {}
+        temp[frndUid] = this.state.users[frndUid].name
+        updates['users/'+myUid+'/friends'] = temp
+
+        temp = {}
+        temp[myUid] = this.state.users[myUid].name
+        updates['users/'+frndUid+'/friends'] = temp
+
+        firebase.database().ref().update(updates)
         this.setState({ name: '', email: '' });
       }
     }
@@ -111,9 +122,17 @@ class Friends extends Component {
       >
 
         <View style={{ width: '50%', justifyContent: 'center' }}>
-          <View style={{ height: '40%', marginTop: '5%', left: '5%' }}>
+
+          <View style={{ height: '35%', marginTop: '3%', left: '5%' }}>
             <Image source={frndsImg} style={styles.imageStyle} />
           </View>
+
+        <View style={{ marginLeft: '7%', backgroundColor: '#24a46390', marginTop: '3%', borderRadius: 20, borderWidth: 1, borderColor: '#ededed' }}>
+          <Text style={{ textAlign: 'center', alignSelf: 'center', padding: '1%', color: 'white' }}>
+            You : {Object.keys(this.state.users).length==0?'':this.state.users[firebase.auth().currentUser.uid].email}
+          </Text>
+        </View>
+
           <View style={{ width: '100%', justifyContent: 'center' }} >
           <TextInput
               placeholder="Friend's Email"
@@ -124,18 +143,6 @@ class Friends extends Component {
               returnKeyType="go"
               value={this.state.email}
               onChangeText={email => this.setState({ email })}
-            />
-
-            <TextInput
-              placeholder="Create a Nickname for Friend"
-              placeholderTextColor='#555'
-              returnKeyType="next"
-              underlineColorAndroid='rgba(0,0,0,0)'
-              keyboardType="default"
-              autoCorrect={false}
-              style={styles.input}
-              value={this.state.name}
-              onChangeText={name => this.setState({ name })}
             />
 
             <TouchableOpacity
@@ -164,7 +171,7 @@ class Friends extends Component {
 
 const styles = {
   input: {
-    height: '20%',
+    height: '30%',
     width: '70%',
     backgroundColor: '#d2eee0',
     color: '#24a463',

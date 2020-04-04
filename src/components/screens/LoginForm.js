@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Text, Image, View,
-         KeyboardAvoidingView, PixelRatio,
+         KeyboardAvoidingView, PixelRatio, Modal,
          TextInput, ImageBackground, ToastAndroid,
          TouchableOpacity, Alert, Keyboard, BackHandler }
 from 'react-native';
@@ -9,6 +9,7 @@ import { Spinner } from '../common';
 
 const iconImg = require('../../images/Trans_RPS_icon.png');
 const backBg = require('../../images/backgroundBlur.jpg');
+const greenModImg = require('../../images/modalGreen.png');
 
 let f = 1;
 
@@ -19,7 +20,7 @@ export default class LoginForm extends Component {
     this.handleBack = this.handleBack.bind(this);
   }
 
-  state = { email: '', password: '', error: '', loading: false, loggedIn: true };
+  state = { modalVisible: false, name: '', email: '', password: '', error: '', loading: false, loggedIn: true };
 
   componentDidMount() {
     f = PixelRatio.getFontScale(); //Font Factor
@@ -32,6 +33,54 @@ export default class LoginForm extends Component {
       }
     });
     BackHandler.addEventListener('hardwareBackPress', this.handleBack);
+  }
+
+  modal() {
+    return (
+      <View style={{height: '75%',width: '40%', marginTop: '7%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+        <Image source={greenModImg} style={styles.imageStyle} />
+        <View style={{ height: '74%', width: '79%', backgroundColor: 'grey'}}>
+          <Text
+            style={{
+              textShadowColor: 'grey',
+              textShadowOffset: { width: 1, height: 1 },
+              color: '#fdfdfd',
+              fontSize: f * 15,
+              textAlign: 'center',
+              marginLeft: '5%',
+              marginRight: '10%',
+              marginTop: '10%',
+              marginBottom: '0%',
+              fontFamily: 'serif',
+              fontWeight: '700'
+            }}
+          >
+            What's going to be your{'\n'}Game Name?
+          </Text>
+
+          <TextInput
+           placeholder="Game Name"
+           placeholderTextColor='#555'
+           underlineColorAndroid='rgba(0,0,0,0)'
+           autoCorrect={false}
+           style={[styles.input, { fontSize: f*11, alignSelf: 'center', height: '20%', width: '80%', backgroundColor: '#87d4ac90', marginTop: '9%' }]}
+           value={this.state.name}
+           onChangeText={name => this.setState({ name })}
+         />
+
+          <TouchableOpacity
+            onPress={() => {
+              firebase.database().ref('users/'+firebase.auth().currentUser.uid).update({ name: this.state.name, email: this.state.email })
+              this.setState({ modalVisible: false })
+              this.onLoginSuccess()
+            }}
+            style={{ borderRadius: 30, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', backgroundColor: '#87d4ac', width: '45%', marginTop: '2%' }}
+          >
+            <Text style={{ fontSize: f*15, margin: '5%', color: '#444' }}>Let's Begin!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
   }
 
   onLogInPress() {
@@ -53,18 +102,13 @@ export default class LoginForm extends Component {
       this.setState({ error: '', loading: true });
       Keyboard.dismiss();
       firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(() => {
-        firebase.database().ref('users/'+firebase.auth().currentUser.uid).update({ email: this.state.email })
-        this.onLoginSuccess()
-      })
+      .then(() => this.setState({ modalVisible: true, name: '' }))
       .catch(() => this.setState({ error: 'Sign Up Failed.', loading: false }));
     }
   }
 
   onLoginSuccess(user) {
     this.setState({
-      email: '',
-      password: '',
       loading: false,
       error: ''
     });
@@ -98,16 +142,24 @@ export default class LoginForm extends Component {
    return (
     <KeyboardAvoidingView style={{ flex: 1 }}>
       <ImageBackground source={backBg} style={styles.backStyle}>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={this.state.modalVisible}
+          onRequestClose={() => this.setState({ modalVisible: false, online: 1 })}
+        >
+          {this.modal()}
+        </Modal>
         <Image
           style={styles.logo}
           source={iconImg}
         />
-        <View style={{ padding: '4%', width: '50%' }}>
-         <Text style={styles.textStyle}>
+        <View style={{ padding: '4%', width: '50%', marginTop: '2%' }}>
+         <Text style={[styles.textStyle, { fontFamily: 'serif', fontWeight: 'medium' }]}>
           Welcome to{'\n'}
-          Rock, Paper {'&'} Scissors:{'\n'}
-          Evolution!
+          RPS Evolution!
          </Text>
+
          <TextInput
            placeholder="Valid Email ID"
            placeholderTextColor='#555'
@@ -238,5 +290,11 @@ const styles = {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center'
+  },
+  imageStyle: {
+    resizeMode: 'stretch',
+    position: 'absolute',
+    height: '100%',
+    width: '100%'
   }
 };
