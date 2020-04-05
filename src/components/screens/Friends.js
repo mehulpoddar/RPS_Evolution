@@ -58,13 +58,8 @@ class Friends extends Component {
         let myUid = firebase.auth().currentUser.uid;
         let updates = {}
 
-        let temp = {}
-        temp[frndUid] = this.state.users[frndUid].name
-        updates['users/'+myUid+'/friends'] = temp
-
-        temp = {}
-        temp[myUid] = this.state.users[myUid].name
-        updates['users/'+frndUid+'/friends'] = temp
+        updates['users/'+myUid+'/friends/'+frndUid] = this.state.users[frndUid].name
+        updates['users/'+frndUid+'/friends/'+myUid] = this.state.users[myUid].name
 
         firebase.database().ref().update(updates)
         this.setState({ name: '', email: '' });

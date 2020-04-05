@@ -439,12 +439,12 @@ class MainFrameLocal extends Component {
 
   modal() {
     return (
-      <View style={{height: '75%',width: '40%', marginTop: '7%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+      <View style={{height: '80%',width: '45%', marginTop: '4%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
         <Image source={this.state.frame} style={styles.imageStyle} />
-        <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: 20 }} onPress={() => this.setState({ modalVisible: false })}>
+        <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: '8%' }} onPress={() => this.setState({ modalVisible: false })}>
           <Image source={this.state.msg.includes("Game Over")?'':crossImg} style={{ resizeMode: 'contain', height: '100%' }} />
         </TouchableOpacity>
-        <View style={{ height: '74%', width: '79%', backgroundColor: 'grey'}}>
+        <View style={{ height: '74%', width: '79%' }}>
           <Text
             style={{
               textShadowColor: 'grey',
@@ -547,9 +547,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: greenModImg,
-              msg: 'You Evolved your ' + paper[stat].name + ' to ' + paper[stat + 1].name
+              msg: 'You evolved ' + paper[stat].name + ' to ' + paper[stat + 1].name
               + '\n\n:･ﾟ✧  ʕ ␥_␥ʔ  :･ﾟ✧',
               obj: paper[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana1: m,
               pStat1: stat + 1
             });
@@ -592,9 +593,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: greenModImg,
-              msg: 'You Evolved your ' + rock[stat].name + ' to ' + rock[stat + 1].name
+              msg: 'You evolved ' + rock[stat].name + ' to ' + rock[stat + 1].name
               + '\n\n:･ﾟ✧ ┌༼▀̿̿Ĺ̯̿̿▀̿༽┘ :･ﾟ✧',
               obj: rock[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana1: m,
               rStat1: stat + 1
             });
@@ -637,9 +639,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: greenModImg,
-              msg: 'You evolved your ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
+              msg: 'You evolved ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
               + '\n\n:･ﾟ✧ ┌(★o☆)┘ :･ﾟ✧',
               obj: scissors[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana1: m,
               sStat1: stat + 1
             });
@@ -684,9 +687,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: redModImg,
-              msg: 'Opponent evolved their ' + paper[stat].name + ' to ' + paper[stat + 1].name
+              msg: 'CPU evolved ' + paper[stat].name + ' to ' + paper[stat + 1].name
               + '\n\n:･ﾟ✧  ʕ ␥_␥ʔ  :･ﾟ✧',
               obj: paper[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana2: m,
               pStat2: stat + 1
             });
@@ -705,9 +709,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: redModImg,
-              msg: 'Opponent evolved their ' + rock[stat].name + ' to ' + rock[stat + 1].name
+              msg: 'CPU evolved ' + rock[stat].name + ' to ' + rock[stat + 1].name
               + '\n\n:･ﾟ✧ ┌༼▀̿̿Ĺ̯̿̿▀̿༽┘ :･ﾟ✧',
               obj: rock[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana2: m,
               rStat2: stat + 1
             });
@@ -726,9 +731,10 @@ class MainFrameLocal extends Component {
             this.setState({
               modalVisible: true,
               frame: redModImg,
-              msg: 'Opponent evolved their ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
+              msg: 'CPU evolved ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
               + '\n\n:･ﾟ✧ ┌(★o☆)┘ :･ﾟ✧',
               obj: scissors[stat + 1].img,
+              callback: () => this.setState({ modalVisible: false }),
               mana2: m,
               sStat2: stat + 1
             });
@@ -743,16 +749,19 @@ class MainFrameLocal extends Component {
     }
   }
 
-  trioRan(x) {
+  probability(p) {
     const ran = Math.random();
+    if (ran < p) {
+      return true;
+    }
+    return false;
+  }
+
+  playProb(x) {
     if (x === 2) {
-      if (ran < 0.3) {
-        return true;
-      }
+      return this.probability(0.2)
     } else if (x === 3) {
-      if (ran < 0.45) {
-        return true;
-      }
+      return this.probability(0.37)
     } else if (x >= 4) {
       return true;
     }
@@ -762,11 +771,11 @@ class MainFrameLocal extends Component {
   CPUEvolve() {
     const m = this.state.mana2;
     if (m === 1) {
-      if (this.trioRan(2)) {
+      if (this.probability(0.2)) {
         this.manaUser(2, 1);
       }
     } else if (m === 2) {
-      if (this.trioRan(3)) {
+      if (this.probability(0.33)) {
         this.manaUser(2, 2);
       }
     } else if (m === 3) {
@@ -781,7 +790,7 @@ class MainFrameLocal extends Component {
       CPUMemCount += 1;
     }
 
-    if (this.trioRan(CPUMemCount - 1)) {
+    if (this.playProb(CPUMemCount)) {
       if (CPUMem === 1) {
         tap2 = 3;
       } else if (CPUMem === 2) {
@@ -930,6 +939,10 @@ class MainFrameLocal extends Component {
 
       if (h1 <= 0) {
         this.setState({
+          hp1: 0,
+          mana1: m1,
+          hp2: h2,
+          mana2: m2,
           modalVisible: true,
           frame: redModImg,
           msg: 'Game Over : YOU LOSE!\nWhat a great Battle!'
@@ -962,47 +975,53 @@ class MainFrameLocal extends Component {
             );
           }
         })
-  } else if (h2 <= 0) {
-    this.setState({
-      modalVisible: true,
-      frame: greenModImg,
-      msg: 'Game Over : YOU WIN!\nWhat a great Battle!'
-      + '\n\nLet us have a look at the statistics of your game!',
-      obj: statsImg,
-      callback: () => {
-        TrackPlayer.pause()
-        AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/1406208875');
-        AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
-          () => {
-            TrackPlayer.stop()
-            AdMobRewarded.removeAllListeners();
-            AdMobInterstitial.removeAllListeners();
-            BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-            AppState.removeEventListener("change", this._handleAppStateChange);
-            this.setState({ modalVisible: false });
-            this.props.navigation.navigate('statsPage', { gameStats });
-        });
-        ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
-        AdMobInterstitial.addEventListener('adClosed',
-          () => {
-            TrackPlayer.stop()
-            AdMobRewarded.removeAllListeners();
-            AdMobInterstitial.removeAllListeners();
-            BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-            AppState.removeEventListener("change", this._handleAppStateChange);
-            this.setState({ modalVisible: false });
-            this.props.navigation.navigate('statsPage', { gameStats });
+        return;
+      } else if (h2 <= 0) {
+        this.setState({
+          hp1: h1,
+          mana1: m1,
+          hp2: 0,
+          mana2: m2,
+          modalVisible: true,
+          frame: greenModImg,
+          msg: 'Game Over : YOU WIN!\nWhat a great Battle!'
+          + '\n\nLet us have a look at the statistics of your game!',
+          obj: statsImg,
+          callback: () => {
+            TrackPlayer.pause()
+            AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/1406208875');
+            AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
+              () => {
+                TrackPlayer.stop()
+                AdMobRewarded.removeAllListeners();
+                AdMobInterstitial.removeAllListeners();
+                BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
+                AppState.removeEventListener("change", this._handleAppStateChange);
+                this.setState({ modalVisible: false });
+                this.props.navigation.navigate('statsPage', { gameStats });
+            });
+            ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
+            AdMobInterstitial.addEventListener('adClosed',
+              () => {
+                TrackPlayer.stop()
+                AdMobRewarded.removeAllListeners();
+                AdMobInterstitial.removeAllListeners();
+                BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
+                AppState.removeEventListener("change", this._handleAppStateChange);
+                this.setState({ modalVisible: false });
+                this.props.navigation.navigate('statsPage', { gameStats });
+              }
+            );
           }
-        );
+        })
+        return;
       }
-    })
-  }
 
       this.setState({
         winner: w,
         winMem: wm,
         supCh: sc,
-        inactive: this.state.delay == 0?false:true,
+        inactive: true,
 
         batImg1: bi1,
         batImg2: null,
@@ -1080,6 +1099,7 @@ class MainFrameLocal extends Component {
             </TouchableOpacity>
 
             <View style={[styles.statsContainerStyle, { left: '21%', borderColor: '#0392cf', backgroundColor: '#0392cf30', width: '20%', padding: '5%' }]}>
+              <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13, textAlign: 'center' }]}>YOU</Text>
               <View style={{ flexDirection: 'row' }}>
                 <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13 }]}>HP : </Text>
                 <Text style={[styles.textStyle, { color: 'black', position: 'absolute', fontSize: f * 13, right: 0 }]}>{this.state.hp1}</Text>
@@ -1102,6 +1122,7 @@ class MainFrameLocal extends Component {
               </View>
             </View>
             <View style={[styles.statsContainerStyle, { left: '53%', borderColor: '#dd4466', backgroundColor: '#dd446640', width: '20%', padding: '5%' }]}>
+              <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13, textAlign: 'center' }]}>CPU</Text>
               <View style={{ flexDirection: 'row' }}>
                 <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13 }]}>HP : </Text>
                 <Text style={[styles.textStyle, { color: 'black', position: 'absolute', fontSize: f * 13, right: 0 }]}>{this.state.hp2}</Text>
@@ -1174,25 +1195,22 @@ class MainFrameLocal extends Component {
               </View>
               <View style={{ flex: 0.35 }}>
                 {/* Weapon Area */}
-                <Text style={[styles.pLabelStyle, { color: '#5577dd', left: '37%', fontFamily: 'serif', fontWeight: 'bold' }]}>YOU</Text>
                 <Image source={this.state.batImg1} style={styles.p1WeaponStyle} />
                 <Image source={this.state.batImg2} style={styles.p2WeaponStyle} />
-                <Text style={[styles.pLabelStyle, { color: '#dd4466', left: '92%', bottom: '70%', fontFamily: 'serif', fontWeight: 'bold' }]}>CPU</Text>
               </View>
             </View>
-            <View style={{ flex: 0.35, justifyContent: 'flex-end' }} >
+            <View style={{ flex: 0.35, justifyContent: 'flex-end', alignItems: 'flex-end', paddingBottom: '1%' }} >
               {/* Buttons Area */}
 
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '80%', height: '30%' }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     tap1 = 3;
                     this.CPUPlay();
                   }}
                 >
-                  <Image source={sciButton} style={styles.buttonStyle} />
+                  <Image source={sciButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {scissors[this.state.sStat1].name}
@@ -1202,18 +1220,16 @@ class MainFrameLocal extends Component {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
               {/*---------------------------------------------------------------*/}
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '85%', height: '30%' }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     tap1 = 2;
                     this.CPUPlay();
                   }}
                 >
-                  <Image source={rockButton} style={styles.buttonStyle} />
+                  <Image source={rockButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {rock[this.state.rStat1].name}
@@ -1223,18 +1239,16 @@ class MainFrameLocal extends Component {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
               {/*---------------------------------------------------------------*/}
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '85%', height: '30%'  }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     tap1 = 1;
                     this.CPUPlay();
                   }}
                 >
-                  <Image source={paperButton} style={styles.buttonStyle} />
+                  <Image source={paperButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {paper[this.state.pStat1].name}
@@ -1244,7 +1258,6 @@ class MainFrameLocal extends Component {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
 
             </View>
           </View>
@@ -1260,7 +1273,7 @@ const styles = {
     position: 'absolute',
     height: '100%',
     width: '50%',
-    top: '5%',
+    top: '10%',
     left: '20%'
   },
   p2Style: {
@@ -1268,7 +1281,7 @@ const styles = {
     position: 'absolute',
     height: '100%',
     width: '50%',
-    top: '0%',
+    top: '5%',
     left: '75%'
   },
   p1WeaponStyle: {
@@ -1276,7 +1289,7 @@ const styles = {
     position: 'absolute',
     height: '80%',
     width: '50%',
-    bottom: '35%',
+    bottom: '32%',
     left: '35%'
   },
   p2WeaponStyle: {
@@ -1284,40 +1297,30 @@ const styles = {
     position: 'absolute',
     height: '80%',
     width: '50%',
-    bottom: '35%',
-    left: '57%'
+    bottom: '32%',
+    left: '53%'
   },
   imageStyle: {
-    resizeMode: 'stretch',
+    resizeMode: 'contain',
     position: 'absolute',
     height: '100%',
     width: '100%'
   },
-  buttonStyle: {
-    resizeMode: 'stretch',
-    position: 'absolute',
-    width: '105%',
-    height: '110%',
-    left: '27%',
-    bottom: '10%'
-  },
   arrowStyle: {
-    resizeMode: 'stretch',
+    resizeMode: 'contain',
     position: 'absolute',
-    width: '90%',
-    height: '100%',
-    right: '0%'
+    width: '100%',
+    height: '100%'
   },
   textContainer: {
     flex: 1,
-    left: '40%',
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    bottom: '14%'
+    marginLeft: '12%'
   },
   textStyle: {
-    fontSize: f * 15,
+    fontSize: f * 13,
     textShadowColor: 'grey',
     textShadowOffset: { width: 1, height: 1 },
     fontStyle: 'italic',

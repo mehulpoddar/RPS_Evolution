@@ -27,7 +27,7 @@ export default class LoginForm extends Component {
 
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-          this.onLoginSuccess(user);
+        this.onLoginSuccess(user);
       } else {
         this.setState({ loggedIn: false });
       }
@@ -37,9 +37,9 @@ export default class LoginForm extends Component {
 
   modal() {
     return (
-      <View style={{height: '75%',width: '40%', marginTop: '7%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+      <View style={{height: '83%',width: '47%', marginTop: '4%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
         <Image source={greenModImg} style={styles.imageStyle} />
-        <View style={{ height: '74%', width: '79%', backgroundColor: 'grey'}}>
+        <View style={{ height: '74%', width: '79%' }}>
           <Text
             style={{
               textShadowColor: 'grey',
@@ -55,14 +55,15 @@ export default class LoginForm extends Component {
               fontWeight: '700'
             }}
           >
-            What's going to be your{'\n'}Game Name?
+            What shall we call you?
           </Text>
 
           <TextInput
-           placeholder="Game Name"
+           placeholder="Name"
            placeholderTextColor='#555'
            underlineColorAndroid='rgba(0,0,0,0)'
            autoCorrect={false}
+           maxLength={11}
            style={[styles.input, { fontSize: f*11, alignSelf: 'center', height: '20%', width: '80%', backgroundColor: '#87d4ac90', marginTop: '9%' }]}
            value={this.state.name}
            onChangeText={name => this.setState({ name })}
@@ -70,11 +71,16 @@ export default class LoginForm extends Component {
 
           <TouchableOpacity
             onPress={() => {
-              firebase.database().ref('users/'+firebase.auth().currentUser.uid).update({ name: this.state.name, email: this.state.email })
-              this.setState({ modalVisible: false })
-              this.onLoginSuccess()
+              if(this.state.name != '') {
+                firebase.database().ref('users/'+firebase.auth().currentUser.uid).update({ name: this.state.name, email: this.state.email })
+                this.setState({ modalVisible: false })
+                BackHandler.removeEventListener('hardwareBackPress', this.handleBack);
+                this.props.navigation.navigate('homePage');
+              } else {
+                ToastAndroid.show("Enter your name", ToastAndroid.SHORT);
+              }
             }}
-            style={{ borderRadius: 30, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', backgroundColor: '#87d4ac', width: '45%', marginTop: '2%' }}
+            style={{ borderRadius: 30, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', backgroundColor: '#87d4ac', width: '55%', marginTop: '2%' }}
           >
             <Text style={{ fontSize: f*15, margin: '5%', color: '#444' }}>Let's Begin!</Text>
           </TouchableOpacity>
@@ -102,7 +108,10 @@ export default class LoginForm extends Component {
       this.setState({ error: '', loading: true });
       Keyboard.dismiss();
       firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(() => this.setState({ modalVisible: true, name: '' }))
+      .then(() => {
+        firebase.database().ref('users/'+firebase.auth().currentUser.uid).update({ email: this.state.email })
+        this.onLoginSuccess();
+      })
       .catch(() => this.setState({ error: 'Sign Up Failed.', loading: false }));
     }
   }
@@ -111,9 +120,16 @@ export default class LoginForm extends Component {
     this.setState({
       loading: false,
       error: ''
+    }, () => {
+      firebase.database().ref('users/'+firebase.auth().currentUser.uid).once('value', u => {
+        if(u.val() && u.val().name && u.val() != null && u.val().name != null) {
+          BackHandler.removeEventListener('hardwareBackPress', this.handleBack);
+          this.props.navigation.navigate('homePage');
+        } else {
+          this.setState({ modalVisible: true, name: '' })
+        }
+      })
     });
-    BackHandler.removeEventListener('hardwareBackPress', this.handleBack);
-    this.props.navigation.navigate('homePage');
   }
 
   handleBack() {
@@ -146,7 +162,6 @@ export default class LoginForm extends Component {
           animationType="slide"
           transparent={true}
           visible={this.state.modalVisible}
-          onRequestClose={() => this.setState({ modalVisible: false, online: 1 })}
         >
           {this.modal()}
         </Modal>
@@ -155,7 +170,7 @@ export default class LoginForm extends Component {
           source={iconImg}
         />
         <View style={{ padding: '4%', width: '50%', marginTop: '2%' }}>
-         <Text style={[styles.textStyle, { fontFamily: 'serif', fontWeight: 'medium' }]}>
+         <Text style={[styles.textStyle, { fontFamily: 'serif', fontWeight: '600' }]}>
           Welcome to{'\n'}
           RPS Evolution!
          </Text>
@@ -218,6 +233,13 @@ export default class LoginForm extends Component {
  }
  return (
    <ImageBackground source={backBg} style={styles.spinnerStyle}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={this.state.modalVisible}
+    >
+      {this.modal()}
+    </Modal>
     <Image source={iconImg} style={{ left: '10%' }} />
     <Spinner size='large' />
    </ImageBackground>

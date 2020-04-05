@@ -36,6 +36,7 @@ const greenModImg = require('../../images/modalGreen.png');
 const redModImg = require('../../images/modalRed.png');
 const crossImg = require('../../images/cross.png');
 const contImg = require('../../images/continue.png');
+const leaveImg = require('../../images/leaveGame.png');
 const adImg = require('../../images/ad.png');
 const statsImg = require('../../images/stats.png');
 
@@ -298,6 +299,10 @@ class MainFrameOnline extends Component {
 
     this.host = props.route.params.host;
     this.uid = props.route.params.uid;
+    if(this.host == 0) {
+      this.myName = props.route.params.myName;
+      this.hostName = props.route.params.hostName;
+    }
 
     gameStats = {
       p1: {
@@ -394,6 +399,10 @@ class MainFrameOnline extends Component {
     });
 
     firebase.database().ref('users/'+this.uid+'/game').set({
+      name1: this.host==1?'':this.hostName,
+      name2: this.host==1?'':this.myName,
+      present1: 1,
+      present2: this.host==1?0:1,
       winner: 0,
       winMem: 0,
       supCh: 0,
@@ -447,6 +456,10 @@ state = {
   obj: undefined,
   callback: undefined,
 
+  name1: this.host==1?'':this.hostName,
+  name2: this.host==1?'':this.myName,
+  present1: 1,
+  present2: this.host==1?0:1,
   winner: 0,
   winMem: 0,
   supCh: 0,
@@ -491,19 +504,21 @@ componentDidMount() {
 
     firebase.database().ref('users/'+this.uid+'/game').on('value', dataSnapshot => {
       this.setState(dataSnapshot.val(), () => {
-        if (Math.round((this.state.hp1 + this.state.hp2) / 2) < 180 && Ad) {
+        if (Math.round((this.state.hp1 + this.state.hp2) / 2) < 180 && middleAd) {
           middleAd = false;
           AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/7948847756');
           AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd());
         }
+
         if(this.statDecider(14) != ps) {
           ps = this.statDecider(14)
           this.setState({
             modalVisible: true,
             frame: redModImg,
-            msg: 'Opponent evolved their ' + paper[this.statDecider(3) - 1].name + ' to ' + paper[this.statDecider(3)].name
+            msg: this.statDecider(-3) + ' evolved ' + paper[this.statDecider(14) - 1].name + ' to ' + paper[this.statDecider(14)].name
             + '\n\n:･ﾟ✧  ʕ ␥_␥ʔ  :･ﾟ✧',
-            obj: paper[this.statDecider(3)].img
+            obj: paper[this.statDecider(14)].img,
+            callback: () => this.setState({ modalVisible: false })
           });
         }
         else if(this.statDecider(15) != rs) {
@@ -511,9 +526,10 @@ componentDidMount() {
           this.setState({
             modalVisible: true,
             frame: redModImg,
-            msg: 'Opponent evolved their ' + rock[this.statDecider(4) - 1].name + ' to ' + rock[this.statDecider(4)].name
+            msg: this.statDecider(-3) + ' evolved ' + rock[this.statDecider(15) - 1].name + ' to ' + rock[this.statDecider(15)].name
             + '\n\n:･ﾟ✧ ┌༼▀̿̿Ĺ̯̿̿▀̿༽┘ :･ﾟ✧',
-            obj: rock[this.statDecider(4)].img
+            obj: rock[this.statDecider(15)].img,
+            callback: () => this.setState({ modalVisible: false })
           });
         }
         else if(this.statDecider(16) != ss) {
@@ -521,10 +537,45 @@ componentDidMount() {
           this.setState({
             modalVisible: true,
             frame: redModImg,
-            msg: 'Opponent evolved their ' + scissors[this.statDecider(5) - 1].name + ' to ' + scissors[this.statDecider(5)].name
+            msg: this.statDecider(-3) + ' evolved ' + scissors[this.statDecider(16) - 1].name + ' to ' + scissors[this.statDecider(16)].name
             + '\n\n:･ﾟ✧ ┌(★o☆)┘ :･ﾟ✧',
-            obj: scissors[this.statDecider(5)].img
+            obj: scissors[this.statDecider(16)].img,
+            callback: () => this.setState({ modalVisible: false })
           });
+        }
+
+        if ((this.state.present1 == 0 && this.host == 0) || (this.state.present2 == 0 && this.host == 1)) {
+          this.setState({
+            modalVisible: true,
+            frame: redModImg,
+            msg: this.statDecider(-3) + ' is currently not in the game or watching ad ...\n\n'
+            + 'You may leave the game if they don\'t join soon!',
+            obj: leaveImg,
+            callback: () => {
+              if (this.host == 1)
+                firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+              else
+                firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
+              TrackPlayer.stop()
+              BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
+              AppState.removeEventListener("change", this._handleAppStateChange);
+              AdMobRewarded.removeAllListeners();
+              AdMobInterstitial.removeAllListeners();
+              this.props.navigation.navigate('homePage');
+            }
+          });
+        }
+        if ((this.state.present2 == 1 && this.host == 1) || (this.state.present1 == 1 && this.host == 0)) {
+          if (this.host == 1)
+            firebase.database().ref('users/'+this.uid+'/game').update({ present2: 2 })
+          else
+            firebase.database().ref('users/'+this.uid+'/game').update({ present1: 2 })
+          ToastAndroid.show(this.statDecider(-3) + ' has joined!', ToastAndroid.SHORT)
+          this.setState({ modalVisible: false });
+        }
+
+        if(this.statDecider(19) == 1 && this.statDecider(21) == 1) {
+          ToastAndroid.show(this.statDecider(-3)+" is typing...", ToastAndroid.LONG);
         }
       });
       this.decider();
@@ -538,12 +589,20 @@ _handleAppStateChange = nextAppState => {
     this.state.appState.match(/inactive|background/) &&
     nextAppState === "active"
   ) {
+    if (this.host == 1)
+      firebase.database().ref('users/'+this.uid+'/game').update({ present1: 1 })
+    else
+      firebase.database().ref('users/'+this.uid+'/game').update({ present2: 1 })
     if (this.statDecider(-1) === songImg) {
       TrackPlayer.play()
     }
   } else if (
     this.state.appState === "active" &&
     nextAppState.match(/inactive|background/)) {
+      if (this.host == 1)
+        firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+      else
+        firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
       TrackPlayer.pause()
     }
   this.setState({ appState: nextAppState });
@@ -566,12 +625,12 @@ adRewardHandler() {
 adLoadedHandler() {
   if (this.host === 1) {
     firebase.database().ref('users/'+this.uid+'/game').update({
-      msg1: 'Server: Your opponent is watching an Ad to earn 5 mana...',
+      msg1: 'Server: ' + this.statDecider(-3) + ' watched an Ad to earn 5 mana...',
       msgStat2: 2
     });
   } else {
     firebase.database().ref('users/'+this.uid+'/game').update({
-      msg2: 'Server: Your opponent is watching an Ad to earn 5 mana...',
+      msg2: 'Server: ' + this.statDecider(-3) + ' watched an Ad to earn 5 mana...',
       msgStat1: 2
     });
   }
@@ -585,6 +644,10 @@ backButtonEvent() {
     + 'This page will miss you!',
     obj: contImg,
     callback: () => {
+      if (this.host == 1)
+        firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+      else
+        firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
       TrackPlayer.stop()
       BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
       AppState.removeEventListener("change", this._handleAppStateChange);
@@ -615,6 +678,7 @@ backButtonEvent() {
     Things that are not required for requesting for opponent can be given negative values:
     -1 - song
     -2 - gs (gameStats)
+    -3 - opponent name
     */
 
     let h = this.host;
@@ -629,6 +693,7 @@ backButtonEvent() {
       switch (x) {
         case -1: return this.state.song1;
         case -2: return this.state.gs.p1;
+        case -3: return this.state.name2;
         case 0: return this.state.ready1;
         case 1: return this.state.hp1;
         case 2: return this.state.mana1;
@@ -646,6 +711,7 @@ backButtonEvent() {
       switch (x) {
         case -1: return this.state.song2;
         case -2: return this.state.gs.p2;
+        case -3: return this.state.name1;
         case 0: return this.state.ready2;
         case 1: return this.state.hp2;
         case 2: return this.state.mana2;
@@ -662,14 +728,20 @@ backButtonEvent() {
     }
   }
 
+  showCheck() {
+    if (this.state.msg.includes("Game Over") || this.state.msg.includes("not in the game"))
+      return true
+    return false
+  }
+
   modal() {
     return (
-      <View style={{height: '75%',width: '40%', marginTop: '7%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+      <View style={{height: '80%',width: '45%', marginTop: '4%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
         <Image source={this.state.frame} style={styles.imageStyle} />
-        <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: 20 }} onPress={() => this.setState({ modalVisible: false })}>
-          <Image source={this.state.msg.includes("Game Over")?'':crossImg} style={{ resizeMode: 'contain', height: '100%' }} />
+        <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: '8%' }} onPress={() => this.setState({ modalVisible: false })}>
+          <Image source={this.showCheck()?'':crossImg} style={{ resizeMode: 'contain', height: '100%' }} />
         </TouchableOpacity>
-        <View style={{ height: '74%', width: '79%', backgroundColor: 'grey'}}>
+        <View style={{ height: '74%', width: '79%' }}>
           <Text
             style={{
               textShadowColor: 'grey',
@@ -742,9 +814,10 @@ backButtonEvent() {
           this.setState({
             modalVisible: true,
             frame: greenModImg,
-            msg: 'You evolved your ' + paper[stat].name + ' to ' + paper[stat + 1].name
+            msg: 'You evolved ' + paper[stat].name + ' to ' + paper[stat + 1].name
             + '\n\n:･ﾟ✧  ʕ ␥_␥ʔ  :･ﾟ✧',
-            obj: paper[stat + 1].img
+            obj: paper[stat + 1].img,
+            callback: () => this.setState({ modalVisible: false })
           });
           m -= 1;
           if (this.host === 1) {
@@ -790,9 +863,10 @@ backButtonEvent() {
           this.setState({
             modalVisible: true,
             frame: greenModImg,
-            msg: 'You evolved your ' + rock[stat].name + ' to ' + rock[stat + 1].name
+            msg: 'You evolved ' + rock[stat].name + ' to ' + rock[stat + 1].name
             + '\n\n:･ﾟ✧ ┌༼▀̿̿Ĺ̯̿̿▀̿༽┘ :･ﾟ✧',
-            obj: rock[stat + 1].img
+            obj: rock[stat + 1].img,
+            callback: () => this.setState({ modalVisible: false })
           });
           m -= 2;
           if (this.host === 1) {
@@ -838,9 +912,10 @@ backButtonEvent() {
           this.setState({
             modalVisible: true,
             frame: greenModImg,
-            msg: 'You evolved your ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
+            msg: 'You evolved ' + scissors[stat].name + ' to ' + scissors[stat + 1].name
             + '\n\n:･ﾟ✧ ┌(★o☆)┘ :･ﾟ✧',
-            obj: scissors[stat + 1].img
+            obj: scissors[stat + 1].img,
+            callback: () => this.setState({ modalVisible: false })
           });
           m -= 3;
           if (this.host === 1) {
@@ -1182,150 +1257,156 @@ backButtonEvent() {
       if (h1 <= 0) {
         if (this.host === 1) {
           this.setState({
+            hp1: 0,
+            mana1: m1,
+            hp2: h2,
+            mana2: m2,
             modalVisible: true,
             frame: redModImg,
             msg: 'Game Over : YOU LOSE!\nWhat a great Battle!'
             + '\n\nLet us have a look at the statistics of your game!',
             obj: statsImg,
             callback: () => {
-              TrackPlayer.pause()
+              TrackPlayer.stop()
+              AppState.removeEventListener("change", this._handleAppStateChange);
               AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/6187762268');
               AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
               });
               ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
               AdMobInterstitial.addEventListener('adClosed',
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
                 }
               );
             }
           })
         } else {
           this.setState({
+            hp1: 0,
+            mana1: m1,
+            hp2: h2,
+            mana2: m2,
             modalVisible: true,
             frame: redModImg,
             msg: 'Game Over : YOU WIN!\nWhat a great Battle!'
             + '\n\nLet us have a look at the statistics of your game!',
             obj: statsImg,
             callback: () => {
-              TrackPlayer.pause()
+              TrackPlayer.stop()
+              AppState.removeEventListener("change", this._handleAppStateChange);
               AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/6187762268');
               AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
               });
               ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
               AdMobInterstitial.addEventListener('adClosed',
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
                 }
               );
             }
           })
         }
+        return;
       } else if (h2 <= 0) {
         if (this.host === 0) {
           this.setState({
+            hp1: h1,
+            mana1: m1,
+            hp2: 0,
+            mana2: m2,
             modalVisible: true,
             frame: greenModImg,
             msg: 'Game Over : YOU LOSE!\nWhat a great Battle!'
             + '\n\nLet us have a look at the statistics of your game!',
             obj: statsImg,
             callback: () => {
-              TrackPlayer.pause()
+              TrackPlayer.stop()
+              AppState.removeEventListener("change", this._handleAppStateChange);
               AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/6187762268');
               AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
               });
               ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
               AdMobInterstitial.addEventListener('adClosed',
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
                 }
               );
             }
           })
         } else {
           this.setState({
+            hp1: h1,
+            mana1: m1,
+            hp2: 0,
+            mana2: m2,
             modalVisible: true,
             frame: greenModImg,
             msg: 'Game Over : YOU WIN!\nWhat a great Battle!'
             + '\n\nLet us have a look at the statistics of your game!',
             obj: statsImg,
             callback: () => {
-              TrackPlayer.pause()
+              TrackPlayer.stop()
+              AppState.removeEventListener("change", this._handleAppStateChange);
               AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/6187762268');
               AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
               });
               ToastAndroid.show('Calculating Game Stats... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
               AdMobInterstitial.addEventListener('adClosed',
                 () => {
-                  TrackPlayer.stop()
                   AdMobRewarded.removeAllListeners();
                   AdMobInterstitial.removeAllListeners();
                   BackHandler.removeEventListener('hardwareBackPress', this.backButtonEvent);
-                  AppState.removeEventListener("change", this._handleAppStateChange);
                   this.setState({ modalVisible: false });
-                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2) });
+                  this.props.navigation.navigate('statsPage', { gameStats: this.statDecider(-2), host: this.host, uid: this.uid });
                 }
               );
             }
           })
         }
+        return;
       }
 
       firebase.database().ref('users/'+this.uid+'/game').update({
         winner: w,
         winMem: wm,
         supCh: sc,
-        inactive: this.state.delay == 0?false:true,
+        inactive: true,
 
         ready1: 0,
         ready2: 0,
@@ -1411,7 +1492,7 @@ backButtonEvent() {
           animationType="slide"
           transparent={true}
           visible={this.state.modalVisible}
-          onRequestClose={() => this.state.msg.includes("Game Over")?'':this.setState({ modalVisible: false })}
+          onRequestClose={() => this.showCheck()?'':this.setState({ modalVisible: false })}
         >
           {this.modal()}
         </Modal>
@@ -1433,6 +1514,7 @@ backButtonEvent() {
             </TouchableOpacity>
 
             <View style={[styles.statsContainerStyle, { left: '18%', borderColor: '#0392cf', backgroundColor: '#0392cf30', width: '20%', padding: '5%' }]}>
+              <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13, textAlign: 'center' }]}>{this.state.name1}</Text>
               <View style={{ flexDirection: 'row' }}>
                 <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13 }]}>HP : </Text>
                 <Text style={[styles.textStyle, { color: 'black', position: 'absolute', fontSize: f * 13, right: 0 }]}>{this.state.hp1}</Text>
@@ -1456,6 +1538,7 @@ backButtonEvent() {
             </View>
 
             <View style={[styles.statsContainerStyle, { left: '53%', borderColor: '#dd4466', backgroundColor: '#dd446640', width: '20%', padding: '5%' }]}>
+              <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13, textAlign: 'center' }]}>{this.state.name2}</Text>
               <View style={{ flexDirection: 'row' }}>
                 <Text style={[styles.textStyle, { color: 'black', fontSize: f * 13 }]}>HP : </Text>
                 <Text style={[styles.textStyle, { color: 'black', position: 'absolute', fontSize: f * 13, right: 0 }]}>{this.state.hp2}</Text>
@@ -1529,18 +1612,15 @@ backButtonEvent() {
               </View>
               <View style={{ flex: 0.35 }}>
                 {/* Weapon Area */}
-                <Text style={[styles.pLabelStyle, { color: '#5577dd', left: '35%', fontFamily: 'serif', fontWeight: 'bold' }]}>HOST</Text>
                 <Image source={this.state.batImg1} style={styles.p1WeaponStyle} />
                 <Image source={this.state.batImg2} style={styles.p2WeaponStyle} />
-                <Text style={[styles.pLabelStyle, { color: '#dd4466', left: '88%', bottom: '70%', fontFamily: 'serif', fontWeight: 'bold' }]}>FRIEND</Text>
               </View>
             </View>
-            <View style={{ flex: 0.35, justifyContent: 'flex-end' }} >
+            <View style={{ flex: 0.35, justifyContent: 'flex-end', alignItems: 'flex-end', paddingBottom: '1%' }} >
               {/* Buttons Area */}
 
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '80%', height: '30%' }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     if (this.host === 1) {
@@ -1551,7 +1631,7 @@ backButtonEvent() {
                     this.decider();
                   }}
                 >
-                  <Image source={sciButton} style={styles.buttonStyle} />
+                  <Image source={sciButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {scissors[this.statDecider(5)].name}
@@ -1561,11 +1641,9 @@ backButtonEvent() {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
               {/*---------------------------------------------------------------*/}
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '80%', height: '30%' }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     if (this.host === 1) {
@@ -1576,7 +1654,7 @@ backButtonEvent() {
                     this.decider();
                   }}
                 >
-                  <Image source={rockButton} style={styles.buttonStyle} />
+                  <Image source={rockButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {rock[this.statDecider(4)].name}
@@ -1586,11 +1664,9 @@ backButtonEvent() {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
               {/*---------------------------------------------------------------*/}
-              <View style={{ width: '100%', height: '25%', flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={{ width: '75%' }}
+                  style={{ width: '80%', height: '30%' }}
                   disabled={this.state.inactive}
                   onPress={() => {
                     if (this.host === 1) {
@@ -1601,7 +1677,7 @@ backButtonEvent() {
                     this.decider();
                   }}
                 >
-                  <Image source={paperButton} style={styles.buttonStyle} />
+                  <Image source={paperButton} style={styles.imageStyle} />
                   <View style={styles.textContainer}>
                     <Text style={[styles.textStyle, { color: 'black' }]}>
                       {paper[this.statDecider(3)].name}
@@ -1611,7 +1687,6 @@ backButtonEvent() {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              </View>
 
             </View>
           </View>
@@ -1627,7 +1702,7 @@ const styles = {
     position: 'absolute',
     height: '100%',
     width: '50%',
-    top: '5%',
+    top: '10%',
     left: '16%'
   },
   p2Style: {
@@ -1635,15 +1710,15 @@ const styles = {
     position: 'absolute',
     height: '100%',
     width: '50%',
-    top: '0%',
-    left: '73%'
+    top: '5%',
+    left: '75%'
   },
   p1WeaponStyle: {
     resizeMode: 'contain',
     position: 'absolute',
     height: '80%',
     width: '50%',
-    bottom: '35%',
+    bottom: '32%',
     left: '32%'
   },
   p2WeaponStyle: {
@@ -1651,40 +1726,30 @@ const styles = {
     position: 'absolute',
     height: '80%',
     width: '50%',
-    bottom: '35%',
-    left: '52%'
+    bottom: '32%',
+    left: '53%'
   },
   imageStyle: {
-    resizeMode: 'stretch',
+    resizeMode: 'contain',
     position: 'absolute',
     height: '100%',
     width: '100%'
   },
-  buttonStyle: {
-    resizeMode: 'stretch',
-    position: 'absolute',
-    width: '105%',
-    height: '110%',
-    left: '27%',
-    bottom: '10%'
-  },
   arrowStyle: {
-    resizeMode: 'stretch',
+    resizeMode: 'contain',
     position: 'absolute',
-    width: '90%',
+    width: '100%',
     height: '100%',
-    right: '0%'
   },
   textContainer: {
     flex: 1,
-    left: '40%',
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    bottom: '14%'
+    marginLeft: '12%'
   },
   textStyle: {
-    fontSize: f * 15,
+    fontSize: f * 13,
     textShadowColor: 'grey',
     textShadowOffset: { width: 1, height: 1 },
     fontStyle: 'italic',

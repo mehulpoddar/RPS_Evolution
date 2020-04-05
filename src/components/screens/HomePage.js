@@ -33,7 +33,7 @@ class HomePage extends Component {
 
   state = {
     online: 0,
-    fName: '',
+    myName: '',
     friends: {},
     modalVisible: false
   }
@@ -41,10 +41,9 @@ class HomePage extends Component {
   componentDidMount() {
     f = PixelRatio.getFontScale();
     BackHandler.addEventListener('hardwareBackPress', () => this.handleBack());
-    firebase.database().ref('users/'+firebase.auth().currentUser.uid+'/friends').
-    on('value', friends => {
-      if(friends.val() && friends.val() != null)
-        this.setState({ friends: friends.val() })
+    firebase.database().ref('users/'+firebase.auth().currentUser.uid).on('value', u => {
+      if(u.val() && u.val() != null && u.val()['friends'] && u.val()['friends'] != null)
+        this.setState({ friends: u.val()['friends'], myName: u.val().name })
     })
   }
 
@@ -81,20 +80,30 @@ class HomePage extends Component {
   }
 
   joinPlay(friendUid) {
-      AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/2800462853');
-      AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
-        () => {
-          AdMobInterstitial.removeAllListeners();
-          this.setState({ modalVisible: false, online: 0 });
-          this.props.navigation.navigate('mainFrameOnline', { uid: friendUid, host: 0 })
-        });
-      ToastAndroid.show('Loading Game... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
-      AdMobInterstitial.addEventListener('adClosed',
-        () => {
-          AdMobInterstitial.removeAllListeners();
-          this.setState({ modalVisible: false, online: 0 });
-          this.props.navigation.navigate('mainFrameOnline', { uid: friendUid, host: 0 })
-      })
+    firebase.database().ref('users/'+friendUid).once('value', frnd => {
+      if(!frnd.val().game || frnd.val().game == null) {
+        ToastAndroid.show(this.state.friends[friendUid]+' is not yet hosting...', ToastAndroid.SHORT);
+      } else if (frnd.val().game.present1 == 0) {
+        ToastAndroid.show(this.state.friends[friendUid]+' is not yet hosting...', ToastAndroid.SHORT);
+      } else if (frnd.val().game.present2 == 1 || frnd.val().game.present2 == 2) {
+        ToastAndroid.show(this.state.friends[friendUid]+' is already playing...', ToastAndroid.SHORT);
+      } else {
+        AdMobInterstitial.setAdUnitID('ca-app-pub-5251664647281296/2800462853');
+        AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd()).catch(
+          () => {
+            AdMobInterstitial.removeAllListeners();
+            this.setState({ modalVisible: false, online: 0 });
+            this.props.navigation.navigate('mainFrameOnline', { uid: friendUid, host: 0, myName: this.state.myName, hostName: this.state.friends[friendUid] })
+          });
+        ToastAndroid.show('Loading Game... (▀̿Ĺ̯▀̿ ̿)', ToastAndroid.LONG);
+        AdMobInterstitial.addEventListener('adClosed',
+          () => {
+            AdMobInterstitial.removeAllListeners();
+            this.setState({ modalVisible: false, online: 0 });
+            this.props.navigation.navigate('mainFrameOnline', { uid: friendUid, host: 0, myName: this.state.myName, hostName: this.state.friends[friendUid] })
+        })
+      }
+    })
   }
 
   onlineRender() {
@@ -135,12 +144,12 @@ class HomePage extends Component {
   modal() {
     if(this.state.online == 2) {
       return (
-        <View style={{height: '65%',width: '40%', marginTop: '7%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+        <View style={{height: '80%',width: '45%', marginTop: '6%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
           <Image source={modImg} style={styles.imageStyle} />
-          <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: 20 }} onPress={() => this.setState({ modalVisible: false, online: 1 })}>
+          <TouchableOpacity style={{ position: 'absolute', left: '34%', top: '0%', height: '8%' }} onPress={() => this.setState({ modalVisible: false, online: 1 })}>
             <Image source={crossImg} style={{ resizeMode: 'contain', height: '100%' }} />
           </TouchableOpacity>
-          <View style={{ height: '74%', width: '79%', backgroundColor: 'grey'}}>
+          <View style={{ height: '74%', width: '79%' }}>
             <Text
               style={{
                 textShadowColor: 'grey',
@@ -184,12 +193,12 @@ class HomePage extends Component {
       )
     } else if(this.state.online == 3) {
       return (
-        <View style={{height: '85%',width: '50%', marginTop: '2%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
+        <View style={{height: '80%',width: '45%', marginTop: '4%', alignSelf: 'center', justifyContent: 'center', alignItems: 'center'}}>
           <Image source={modImg} style={styles.imageStyle} />
-          <TouchableOpacity style={{ position: 'absolute', left: '37%', top: '0%', height: 20 }} onPress={() => this.setState({ modalVisible: false, online: 1 })}>
+          <TouchableOpacity style={{ position: 'absolute', left: '37%', top: '0%', height: '8%' }} onPress={() => this.setState({ modalVisible: false, online: 1 })}>
             <Image source={crossImg} style={{ resizeMode: 'contain', height: '100%' }} />
           </TouchableOpacity>
-          <View style={{ height: '74%', width: '79%', backgroundColor: 'grey', padding: '5%', paddingRight: '6%'}}>
+          <View style={{ height: '74%', width: '79%', padding: '5%', paddingRight: '6%'}}>
             <ScrollView>
               {this.renderFriends()}
             </ScrollView>

@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   BackHandler,
   PixelRatio,
-  ToastAndroid
+  ToastAndroid,
+  AppState
 } from 'react-native';
 import { AdMobBanner, AdMobRewarded, AdMobInterstitial } from 'react-native-admob';
+import firebase from 'firebase';
 
 let f = 1;
 
@@ -139,6 +141,8 @@ class StatsPage extends Component {
 
     f = PixelRatio.getFontScale(); //Font Factor
     const gameStats = props.route.params.gameStats;
+    this.host = props.route.params.host;
+    this.uid = props.route.params.uid;
 
     table.row2.cell2.text = gameStats.scissors.won;
     table.row2.cell3.text = gameStats.scissors.lost;
@@ -167,11 +171,32 @@ class StatsPage extends Component {
     this.handleBack = this.handleBack.bind(this);
   }
 
+  state= { appState: AppState.currentState }
+
   componentDidMount() {
+    AppState.addEventListener("change", this._handleAppStateChange);
     BackHandler.addEventListener('hardwareBackPress', () => this.handleBack());
   }
 
+  _handleAppStateChange = nextAppState => {
+    if (
+      this.state.appState === "active" &&
+      nextAppState.match(/inactive|background/)) {
+        if (this.host == 1)
+          firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+        else
+          firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
+      }
+    this.setState({ appState: nextAppState });
+  };
+  
+
   handleBack() {
+    if (this.host == 1)
+      firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+    else
+      firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
+    AppState.removeEventListener("change", this._handleAppStateChange);
     this.props.navigation.navigate('homePage');
     return true;
   }
@@ -236,7 +261,14 @@ class StatsPage extends Component {
             marginTop: '3%',
             alignSelf: 'center'
           }}
-          onPress={() => this.props.navigation.navigate('homePage')}
+          onPress={() => {
+            if (this.host == 1)
+              firebase.database().ref('users/'+this.uid+'/game').update({ present1: 0 })
+            else
+              firebase.database().ref('users/'+this.uid+'/game').update({ present2: 0 })
+            AppState.removeEventListener("change", this._handleAppStateChange);
+            this.props.navigation.navigate('homePage')}
+            }
           >
             <Text style={[styles.titleStyle, { fontSize: f * 16, color: '#333' }]}>
               Let's Go  ᕕ(ᐛ)ᕗ
